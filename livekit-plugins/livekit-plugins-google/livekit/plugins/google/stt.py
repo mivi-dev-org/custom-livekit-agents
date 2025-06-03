@@ -574,7 +574,8 @@ def _streaming_recognize_response_to_speech_data(
     confidence /= len(resp.results)
     lg = resp.results[0].language_code
 
-    if confidence < min_confidence_threshold:
+    # If confidence is 0.0, ignore confidence threshold check (some models don't provide reliable confidence)
+    if confidence > 0.0 and confidence < min_confidence_threshold:
         return None
     if text == "":
         return None
