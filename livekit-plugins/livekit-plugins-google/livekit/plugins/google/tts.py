@@ -238,7 +238,7 @@ class ChunkedStream(tts.ChunkedStream):
 
         try:
             response: SynthesizeSpeechResponse = await self._client.synthesize_speech(
-                input=texttospeech.SynthesisInput(text=self._input_text),
+                input=texttospeech.SynthesisInput(markup=self._input_text),
                 voice=self._opts.voice,
                 audio_config=self._opts.audio_config,
                 timeout=self._conn_options.timeout,
@@ -338,7 +338,7 @@ class SynthesizeStream(tts.SynthesizeStream):
                 async for input in input_stream:
                     self._mark_started()
                     yield texttospeech.StreamingSynthesizeRequest(
-                        input=texttospeech.StreamingSynthesisInput(text=input.token)
+                        input=texttospeech.StreamingSynthesisInput(markup=input.token)
                     )
 
             except Exception:
