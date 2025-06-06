@@ -304,7 +304,7 @@ class SynthesizeStream(tts.SynthesizeStream):
                 async for input in input_stream:
                     self._mark_started()
                     yield texttospeech.StreamingSynthesizeRequest(
-                        input=texttospeech.StreamingSynthesisInput(text=input.token)
+                        input=texttospeech.StreamingSynthesisInput(markup=input.token)
                     )
 
             except Exception:
