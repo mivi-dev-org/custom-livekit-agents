@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import weakref
 from dataclasses import dataclass
+from typing import Literal
 
 from google.api_core.client_options import ClientOptions
 from google.api_core.exceptions import DeadlineExceeded, GoogleAPICallError
@@ -47,12 +48,16 @@ DEFAULT_VOICE_NAME = "en-US-Chirp3-HD-Charon"
 DEFAULT_LANGUAGE = "en-US"
 DEFAULT_GENDER = "neutral"
 
+# Input types for TTS synthesis
+InputType = Literal["text", "markup"]
+
 
 @dataclass
 class _TTSOptions:
     voice: texttospeech.VoiceSelectionParams
     audio_config: texttospeech.AudioConfig
     tokenizer: tokenize.SentenceTokenizer
+    input_type: InputType
 
 
 class TTS(tts.TTS):
@@ -72,6 +77,7 @@ class TTS(tts.TTS):
         credentials_file: NotGivenOr[str] = NOT_GIVEN,
         tokenizer: NotGivenOr[tokenize.SentenceTokenizer] = NOT_GIVEN,
         use_streaming: NotGivenOr[bool] = NOT_GIVEN,
+        input_type: InputType = "text",
     ) -> None:
         """
         Create a new instance of Google TTS.
@@ -93,6 +99,7 @@ class TTS(tts.TTS):
             credentials_file (str, optional): Path to the Google Cloud credentials JSON file. Default is None.
             tokenizer (tokenize.SentenceTokenizer, optional): Tokenizer for the TTS. Default is a basic sentence tokenizer.
             use_streaming (bool, optional): Whether to use streaming synthesis. Default is True.
+            input_type (InputType, optional): Input type for synthesis. "text" for plain text, "markup" for SSML/markup. Default is "text".
         """  # noqa: E501
         if not is_given(use_streaming):
             use_streaming = True
@@ -130,6 +137,7 @@ class TTS(tts.TTS):
                 speaking_rate=speaking_rate,
             ),
             tokenizer=tokenizer,
+            input_type=input_type,
         )
         self._streams = weakref.WeakSet[SynthesizeStream]()
 
@@ -140,6 +148,7 @@ class TTS(tts.TTS):
         gender: NotGivenOr[Gender | str] = NOT_GIVEN,
         voice_name: NotGivenOr[str] = NOT_GIVEN,
         speaking_rate: NotGivenOr[float] = NOT_GIVEN,
+        input_type: NotGivenOr[InputType] = NOT_GIVEN,
     ) -> None:
         """
         Update the TTS options.
@@ -149,6 +158,7 @@ class TTS(tts.TTS):
             gender (Gender | str, optional): Voice gender ("male", "female", "neutral").
             voice_name (str, optional): Specific voice name.
             speaking_rate (float, optional): Speed of speech.
+            input_type (InputType, optional): Input type for synthesis. "text" for plain text, "markup" for SSML/markup.
         """  # noqa: E501
         params = {}
         if is_given(language):
@@ -163,6 +173,9 @@ class TTS(tts.TTS):
 
         if is_given(speaking_rate):
             self._opts.audio_config.speaking_rate = speaking_rate
+
+        if is_given(input_type):
+            self._opts.input_type = input_type
 
     def _ensure_client(self) -> texttospeech.TextToSpeechAsyncClient:
         api_endpoint = "texttospeech.googleapis.com"
@@ -237,8 +250,14 @@ class ChunkedStream(tts.ChunkedStream):
         request_id = utils.shortuuid()
 
         try:
+            synthesis_input_params = {}
+            if self._opts.input_type == "markup":
+                synthesis_input_params["markup"] = self._input_text
+            else:
+                synthesis_input_params["text"] = self._input_text
+
             response: SynthesizeSpeechResponse = await self._client.synthesize_speech(
-                input=texttospeech.SynthesisInput(markup=self._input_text),
+                input=texttospeech.SynthesisInput(**synthesis_input_params),
                 voice=self._opts.voice,
                 audio_config=self._opts.audio_config,
                 timeout=self._conn_options.timeout,
@@ -337,8 +356,14 @@ class SynthesizeStream(tts.SynthesizeStream):
                 yield texttospeech.StreamingSynthesizeRequest(streaming_config=streaming_config)
                 async for input in input_stream:
                     self._mark_started()
+                    streaming_input_params = {}
+                    if self._opts.input_type == "markup":
+                        streaming_input_params["markup"] = input.token
+                    else:
+                        streaming_input_params["text"] = input.token
+
                     yield texttospeech.StreamingSynthesizeRequest(
-                        input=texttospeech.StreamingSynthesisInput(markup=input.token)
+                        input=texttospeech.StreamingSynthesisInput(**streaming_input_params)
                     )
 
             except Exception:
