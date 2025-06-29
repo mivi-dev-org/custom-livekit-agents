@@ -578,10 +578,6 @@ def _recognize_response_to_speech_event(
     confidence /= len(resp.results)
     logger.debug(f"STT confidence: {confidence}, text: {text}")
     lg = resp.results[0].language_code
-    if confidence < min_confidence_threshold:
-        return None
-    if text == "":
-        return None
 
     return stt.SpeechEvent(
         type=stt.SpeechEventType.FINAL_TRANSCRIPT,
