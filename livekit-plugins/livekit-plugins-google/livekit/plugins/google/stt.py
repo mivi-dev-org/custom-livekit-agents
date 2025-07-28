@@ -534,6 +534,7 @@ class SpeechStream(stt.SpeechStream):
                         ),
                         streaming_features=cloud_speech.StreamingRecognitionFeatures(
                             interim_results=self._config.interim_results,
+                            enable_voice_activity_events=True,
                         ),
                     )
 
