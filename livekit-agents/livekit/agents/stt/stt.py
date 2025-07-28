@@ -291,35 +291,38 @@ class RecognizeStream(ABC):
         )
 
     async def _metrics_monitor_task(self, event_aiter: AsyncIterable[SpeechEvent]) -> None:
-            """Task used to collect metrics"""
+        """Task used to collect metrics"""
+        last_end_of_speech = None
+        async for ev in event_aiter:
+            event_time = time.perf_counter()
+            if ev.type == SpeechEventType.RECOGNITION_USAGE:
+                assert ev.recognition_usage is not None, (
+                    "recognition_usage must be provided for RECOGNITION_USAGE event"
+                )
+                stt_metrics = STTMetrics(
+                    request_id=ev.request_id,
+                    timestamp=time.time(),
+                    duration=0.0,
+                    label=self._stt._label,
+                    audio_duration=ev.recognition_usage.audio_duration,
+                    streamed=True,
+                )
 
-            async for ev in event_aiter:
-                event_time = time.perf_counter()
-                if ev.type == SpeechEventType.RECOGNITION_USAGE:
-                    assert ev.recognition_usage is not None, (
-                        "recognition_usage must be provided for RECOGNITION_USAGE event"
-                    )
-                    stt_metrics = STTMetrics(
-                        request_id=ev.request_id,
-                        timestamp=time.time(),
-                        duration=0.0,
-                        label=self._stt._label,
-                        audio_duration=ev.recognition_usage.audio_duration,
-                        streamed=True,
-                    )
+                self._stt.emit("metrics_collected", stt_metrics)
 
-                    self._stt.emit("metrics_collected", stt_metrics)
+            elif ev.type == SpeechEventType.FINAL_TRANSCRIPT:
+                # text = ev.alternatives[0].text if ev.alternatives else ""
+                # conf = ev.alternatives[0].confidence if ev.alternatives else 0.0
+                # logger.info(f"[STT Event] ✅ FINAL: '{text}' (conf: {conf:.3f}) at {event_time:.6f}")
+                if last_end_of_speech is not None:
+                    diff_ms = max(0, event_time - last_end_of_speech) * 1000
+                    logger.info(f"✅ [STT Event] Time diff between FINAL_TRANSCRIPT and END_OF_SPEECH: {diff_ms:.2f} ms 🛑")
 
-                elif ev.type == SpeechEventType.FINAL_TRANSCRIPT:
-                    # reset the retry count after a successful recognition
-                    text = ev.alternatives[0].text if ev.alternatives else ""
-                    conf = ev.alternatives[0].confidence if ev.alternatives else 0.0
-                    logger.info(f"[STT Event] ✅ FINAL: '{text}' (conf: {conf:.3f}) at {event_time:.6f}")
+                self._num_retries = 0
 
-                    self._num_retries = 0
-
-                elif ev.type == SpeechEventType.END_OF_SPEECH:
-                    logger.info(f"[STT Event] 🛑 END_OF_SPEECH at {event_time:.6f}")
+            elif ev.type == SpeechEventType.END_OF_SPEECH:
+                # logger.info(f"[STT Event] 🛑 END_OF_SPEECH at {event_time:.6f}")
+                last_end_of_speech = event_time
 
     def push_frame(self, frame: rtc.AudioFrame) -> None:
         """Push audio to be recognized"""
