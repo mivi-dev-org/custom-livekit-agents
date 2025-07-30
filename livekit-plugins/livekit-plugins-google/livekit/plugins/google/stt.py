@@ -622,6 +622,7 @@ def _recognize_response_to_speech_event(
         return None
     if text == "":
         return None
+
     return stt.SpeechEvent(
         type=stt.SpeechEventType.FINAL_TRANSCRIPT,
         alternatives=[
