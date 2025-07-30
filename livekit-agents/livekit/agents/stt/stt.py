@@ -316,7 +316,7 @@ class RecognizeStream(ABC):
                 # logger.info(f"[STT Event] ✅ FINAL: '{text}' (conf: {conf:.3f}) at {event_time:.6f}")
                 if last_end_of_speech is not None:
                     diff_ms = max(0, event_time - last_end_of_speech) * 1000
-                    logger.info(f"✅ [STT Event] Time diff between FINAL_TRANSCRIPT and END_OF_SPEECH: {diff_ms:.2f} ms 🛑")
+                    logger.info(f"✅ [STT Event] Time diff between FINAL_TRANSCRIPT({event_time}) and END_OF_SPEECH({last_end_of_speech}): {diff_ms:.2f} ms 🛑")
 
                 self._num_retries = 0
 
