@@ -132,6 +132,23 @@ class VADStream(ABC):
                     inference_count = 0
             elif ev.type in [VADEventType.START_OF_SPEECH, VADEventType.END_OF_SPEECH]:
                 self._last_activity_time = time.perf_counter()
+                if ev.type ==VADEventType.START_OF_SPEECH:
+                    vad_metrics = VADMetrics(
+                            timestamp=ev.timestamp,
+                            idle_time=0,
+                            inference_duration_total=0,
+                            inference_count=0,
+                            label="START_OF_SPEECH",
+                        )
+                elif ev.type == VADEventType.END_OF_SPEECH:
+                    vad_metrics = VADMetrics(
+                            timestamp=ev.timestamp,
+                            idle_time=0,
+                            inference_duration_total=0,
+                            inference_count=0,
+                            label="END_OF_SPEECH",
+                        )
+                    self._vad.emit("metrics_collected", vad_metrics)
 
     def push_frame(self, frame: rtc.AudioFrame) -> None:
         """Push some text to be synthesized"""
