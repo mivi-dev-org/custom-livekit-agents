@@ -320,6 +320,7 @@ class SynthesizeStream(ABC):
         self._metrics_task: asyncio.Task[None] | None = None  # started on first push
         self._current_attempt_has_error = False
         self._started_time: float = 0
+        self._start_time_abs: float
         self._pushed_text: str = ""
 
         # used to track metrics
@@ -398,6 +399,7 @@ class SynthesizeStream(ABC):
         # only set the started time once, it'll get reset after we emit metrics
         if self._started_time == 0:
             self._started_time = time.perf_counter()
+            self._start_time_abs = time.time()
 
     async def _metrics_monitor_task(self, event_aiter: AsyncIterable[SynthesizedAudio]) -> None:
         """Task used to collect metrics"""
@@ -425,6 +427,7 @@ class SynthesizeStream(ABC):
                 timestamp=time.time(),
                 request_id=request_id,
                 segment_id=segment_id,
+                start_time=self._start_time_abs,
                 ttfb=ttfb,
                 duration=duration,
                 characters_count=len(text),

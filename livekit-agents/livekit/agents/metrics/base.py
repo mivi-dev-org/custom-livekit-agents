@@ -39,6 +39,7 @@ class TTSMetrics(BaseModel):
     label: str
     request_id: str
     timestamp: float
+    start_time:float
     ttfb: float
     duration: float
     audio_duration: float
