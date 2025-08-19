@@ -360,7 +360,7 @@ class VADStream(agents.vad.VADStream):
 
                 pub_current_sample += self._model.window_size_samples
                 pub_timestamp += window_duration
-
+                abs_timestamp = time.time()
                 resampling_ratio = self._input_sample_rate / self._model.sample_rate
                 to_copy = (
                     self._model.window_size_samples * resampling_ratio + input_copy_remaining_fract
@@ -458,7 +458,9 @@ class VADStream(agents.vad.VADStream):
                             pub_speaking = True
                             pub_silence_duration = 0.0
                             pub_speech_duration = speech_threshold_duration
-
+                            logger.debug(
+                                f"VAD event - START_OF_SPEECH: {abs_timestamp}, silence_duration: {pub_silence_duration}, speech_duration: {pub_speech_duration}"
+                            )
                             self._event_ch.send_nowait(
                                 agents.vad.VADEvent(
                                     type=agents.vad.VADEventType.START_OF_SPEECH,
@@ -485,7 +487,9 @@ class VADStream(agents.vad.VADStream):
                         pub_speaking = False
                         pub_speech_duration = 0.0
                         pub_silence_duration = silence_threshold_duration
-
+                        logger.debug(
+                            f"VAD event - END_OF_SPEECH: {abs_timestamp}, silence_duration: {pub_silence_duration}, speech_duration: {pub_speech_duration}"
+                        )
                         self._event_ch.send_nowait(
                             agents.vad.VADEvent(
                                 type=agents.vad.VADEventType.END_OF_SPEECH,

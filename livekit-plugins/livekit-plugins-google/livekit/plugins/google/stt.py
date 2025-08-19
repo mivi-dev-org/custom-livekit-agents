@@ -101,7 +101,7 @@ class STT(stt.STT):
     def __init__(
         self,
         *,
-        languages: LanguageCode = "en-US",  # Google STT can accept multiple languages
+        languages: LanguageCode | "auto" = "en-US",  # Google STT can accept multiple languages
         detect_language: bool = True,
         interim_results: bool = True,
         punctuate: bool = True,
@@ -534,6 +534,7 @@ class SpeechStream(stt.SpeechStream):
                         ),
                         streaming_features=cloud_speech.StreamingRecognitionFeatures(
                             interim_results=self._config.interim_results,
+                            enable_voice_activity_events=True,
                         ),
                     )
 
