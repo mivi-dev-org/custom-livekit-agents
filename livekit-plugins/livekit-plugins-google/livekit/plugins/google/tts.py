@@ -40,10 +40,6 @@ DEFAULT_VOICE_NAME = "en-US-Chirp3-HD-Charon"
 DEFAULT_LANGUAGE = "en-US"
 DEFAULT_GENDER = "neutral"
 
-# Input types for TTS synthesis
-InputType = Literal["text", "markup"]
-
-
 @dataclass
 class _TTSOptions:
     voice: texttospeech.VoiceSelectionParams
@@ -175,7 +171,6 @@ class TTS(tts.TTS):
         voice_name: NotGivenOr[str] = NOT_GIVEN,
         speaking_rate: NotGivenOr[float] = NOT_GIVEN,
         volume_gain_db: NotGivenOr[float] = NOT_GIVEN,
-        input_type: NotGivenOr[InputType] = NOT_GIVEN,
     ) -> None:
         """
         Update the TTS options.
@@ -186,7 +181,6 @@ class TTS(tts.TTS):
             voice_name (str, optional): Specific voice name.
             speaking_rate (float, optional): Speed of speech.
             volume_gain_db (float, optional): Volume gain in decibels.
-            input_type (InputType, optional): Input type for synthesis. "text" for plain text, "markup" for SSML/markup.
         """  # noqa: E501
         params = {}
         if is_given(language):
@@ -203,9 +197,6 @@ class TTS(tts.TTS):
             self._opts.speaking_rate = speaking_rate
         if is_given(volume_gain_db):
             self._opts.volume_gain_db = volume_gain_db
-
-        if is_given(input_type):
-            self._opts.input_type = input_type  # type: ignore
 
     def _ensure_client(self) -> texttospeech.TextToSpeechAsyncClient:
         api_endpoint = "texttospeech.googleapis.com"
@@ -251,13 +242,14 @@ class TTS(tts.TTS):
 class ChunkedStream(tts.ChunkedStream):
     def __init__(self, *, tts: TTS, input_text: str, conn_options: APIConnectOptions) -> None:
         super().__init__(tts=tts, input_text=input_text, conn_options=conn_options)
-        self._opts = tts._opts
-        self._client = tts._ensure_client()
+        self._tts: TTS = tts
+        self._opts = replace(tts._opts)
 
     def _build_ssml(self) -> str:
-        """Build SSML markup for the input text."""
-        return f"<speak>{self._input_text}</speak>"
-
+        ssml = "<speak>"
+        ssml += self._input_text
+        ssml += "</speak>"
+        return ssml
     async def _run(self, output_emitter: tts.AudioEmitter) -> None:
         try:
             if self._opts.use_markup:
